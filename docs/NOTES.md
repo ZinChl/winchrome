@@ -35,7 +35,7 @@ cd ~/extensions/winchrome
 
 node winchrome.mjs start                 # 若未在调试模式则启动 Windows Chrome（独立 profile）
 node winchrome.mjs status                # 端口 + DevTools 端点状态
-node winchrome.mjs tools                 # 29 个工具及其说明
+node winchrome.mjs tools                 # 列出全部工具（1.10.1 为 30 个）
 node winchrome.mjs daemon status           # 守护进程状态（start / stop）
 node winchrome.mjs pages                 # 列出页面
 node winchrome.mjs goto https://x.com    # 导航
@@ -53,7 +53,7 @@ node winchrome.mjs seq '[{"name":"take_snapshot"},{"name":"click","args":{"uid":
 
 ## 已实测验证
 
-- 握手：`chrome_devtools 1.9.0`，tools/list 返回 29 个工具
+- 握手：`chrome_devtools 1.10.1`，tools/list 返回 30 个工具（1.9.0 为 29 个，1.10.1 新增 `get_css_styles`）
 - `navigate_page` 到 example.com / bing.com，`list_pages` 显示真实标题与 URL
 - `take_snapshot` 读到无障碍树、`evaluate_script` 取到 `document.title`/`h1`
 - `take_screenshot` 截图回拷 WSL 并被模型读取（example.com、Bing 首页、搜索结果页）
@@ -190,7 +190,7 @@ DSH、改动 profile 配置（会重启插件）、重启 Chrome。想做到零�
 | 截图格式 | PNG 5.4MB（Bing 首页） | JPEG q70 0.55MB | 模型侧看到的是同一张——harness 按 `imagePixelBudget`(640k px) 归一化，省的是传输/编码/落盘 |
 | 启动窗口 | 1602×2324 → 预览 664×963 | 1280×800 → 预览 1011×633 | 同样 token 预算下**文字明显更清晰**（预览更接近预算上限且是桌面比例） |
 | 调用路径 | wrapper 每次新开进程 ≈1.1s | 原生 `mcp__winchrome__*`（常驻服务器） | 无进程启动开销；**快照 uid 可跨调用复用** |
-| 工具 schema | 29 个 / 23.8KB | 22 个 / 17.1KB（可选） | 裁掉 performance/network/emulation 三类，每轮约省 1.7k tokens |
+| 工具 schema | 30 个 / 约 24KB（1.10.1） | 23 个 / 约 17KB（可选） | 裁掉 performance/network/emulation 三类，每轮约省 1.8k tokens |
 
 截图默认值来自 profile 里的 `env.WIN_MCP_EXTRA`；命令行可用同样的环境变量覆盖：
 

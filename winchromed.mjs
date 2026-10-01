@@ -21,6 +21,7 @@ import { WIN_NODE, serverArgs, assertReady, log, winToWsl } from './lib.mjs'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const OUT_DIR = process.env.WINCHROME_OUT || resolve(HERE, 'out')
 const SOCK = process.env.WINCHROME_SOCK || '/tmp/winchrome.sock'
+const PIDFILE = `${SOCK}.pid`
 const tag = 'winchromed'
 
 assertReady(tag)
@@ -122,6 +123,7 @@ const server = createServer((sock) => {
 function cleanup() {
   try { server.close() } catch {}
   try { if (existsSync(SOCK)) unlinkSync(SOCK) } catch {}
+  try { if (existsSync(PIDFILE)) unlinkSync(PIDFILE) } catch {}
 }
 
 if (existsSync(SOCK)) {
@@ -141,6 +143,9 @@ if (existsSync(SOCK)) {
   try { unlinkSync(SOCK) } catch {}
 }
 
-server.listen(SOCK, () => log(tag)(`守护进程就绪: ${SOCK}（对浏览器的连接数：1）`))
+server.listen(SOCK, () => {
+  writeFileSync(PIDFILE, String(process.pid))
+  log(tag)(`守护进程就绪: ${SOCK}（pid ${process.pid}，对浏览器的连接数：1）`)
+})
 process.on('SIGTERM', () => { cleanup(); child.kill('SIGTERM'); process.exit(0) })
 process.on('SIGINT', () => { cleanup(); child.kill('SIGTERM'); process.exit(0) })

@@ -147,6 +147,8 @@ node winchrome.mjs seq '[{"name":"take_snapshot"},{"name":"click","args":{"uid":
   MCP 客户端里的原生工具（服务器常驻，uid 天然跨调用有效）。
 - CLI 默认走常驻守护进程，所以连续调用很快，也不会反复新建浏览器连接。加
   `WINCHROME_NO_DAEMON=1` 可退回每次新开会话。
+- **守护进程会把启动时的参数固化下来**（包括 `WIN_MCP_EXTRA` 等）。改了环境变量后先跑
+  `node winchrome.mjs daemon stop`，下次调用才会按新参数重新拉起。
 
 ## 环境变量
 
@@ -185,7 +187,8 @@ node winchrome.mjs seq '[{"name":"take_snapshot"},{"name":"click","args":{"uid":
 
 ## 兼容性
 
-- 在 Windows 11 + WSL2（Ubuntu）+ Chrome 154 + Node 22 上实测通过。
+- 实测环境：Windows 11 + WSL2（Ubuntu）+ Chrome 154 + Node 22 +
+  `chrome-devtools-mcp` **1.10.1**（30 个工具；1.9.0 为 29 个，1.10.1 新增 `get_css_styles`）。
 - Edge 同样可用（`chrome-devtools-mcp` 官方支持 Chromium 系浏览器）：把 `WIN_CHROME_EXE`
   指向 `msedge.exe`。注意 Edge 也继承了 Chrome 136 的默认 profile 限制。
 - 不依赖 DSH：任何能执行命令的 MCP 客户端都能用它。

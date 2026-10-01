@@ -20,7 +20,7 @@
  *   node winchrome.mjs call <tool> '<json>'  # 任意工具，原始调用
  */
 import { spawn, spawnSync } from 'node:child_process'
-import { mkdirSync, writeFileSync, copyFileSync, existsSync, unlinkSync } from 'node:fs'
+import { mkdirSync, writeFileSync, copyFileSync, existsSync, unlinkSync, readFileSync } from 'node:fs'
 import { connect } from 'node:net'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -302,13 +302,26 @@ try {
         for (let i = 0; i < 24 && !existsSync(SOCK); i++) spawnSync('sleep', ['0.5'])
         console.log(existsSync(SOCK) ? `守护进程已启动: ${SOCK}（此后 CLI 调用不再新增 Chrome 连接）` : '启动失败')
       } else if (sub === 'stop') {
-        if (!existsSync(SOCK)) { console.log('没有在运行的守护进程'); break }
-        const r = await daemonCall([{ name: 'list_pages', args: {} }]) // 触发一次连接以便确认存活
-        unlinkSync(SOCK)
-        console.log('已移除 socket；守护进程会在下次空闲/退出时结束（或 kill 掉 winchromed.mjs 进程）')
-        void r
+        const pidfile = `${SOCK}.pid`
+        if (!existsSync(SOCK) && !existsSync(pidfile)) { console.log('没有在运行的守护进程'); break }
+        // 真正结束进程：守护进程在启动时就把参数（含 WIN_MCP_EXTRA）固化了，
+        // 改环境变量后必须重启它才生效，所以 stop 要能停干净。
+        let pid = null
+        try { pid = Number(readFileSync(pidfile, 'utf8').trim()) } catch {}
+        if (pid) {
+          try { process.kill(pid, 'SIGTERM'); console.log(`已发送 SIGTERM 给守护进程 pid ${pid}`) }
+          catch (e) { console.log(`进程 ${pid} 已不在（${e.code || e.message}）`) }
+        } else {
+          console.log('没有 pidfile（可能不是本工具拉起的守护进程）；仅清理 socket')
+        }
+        for (let i = 0; i < 20 && pid && existsSync(pidfile); i++) await new Promise((s) => setTimeout(s, 100))
+        for (const f of [SOCK, pidfile]) { try { if (existsSync(f)) unlinkSync(f) } catch {} }
+        console.log('守护进程已停止；下次 CLI 调用会按当前环境变量重新拉起')
       } else {
-        console.log(`socket ${SOCK}: ${existsSync(SOCK) ? '存在（守护进程在跑）' : '不存在'}`)
+        const pidfile = `${SOCK}.pid`
+        let pid = null
+        try { pid = readFileSync(pidfile, 'utf8').trim() } catch {}
+        console.log(`socket ${SOCK}: ${existsSync(SOCK) ? '存在' : '不存在'}${pid ? `（pid ${pid}）` : ''}`)
         const r = await daemonCall([{ name: 'list_pages', args: {} }])
         console.log(r?.results ? '守护进程响应正常：\n' + (r.results[0].text || '') : '守护进程无响应')
       }
