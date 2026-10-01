@@ -1,0 +1,44 @@
+{
+  "name": "winchrome",
+  "version": "1.0.0",
+  "description": "Drive Windows-side Chrome from WSL: runs chrome-devtools-mcp on the Windows side so it can reach the loopback-only DevTools endpoint WSL cannot.",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "winchrome": "./winchrome.mjs",
+    "winchromed": "./winchromed.mjs"
+  },
+  "files": [
+    "lib.mjs",
+    "winchrome.mjs",
+    "winchromed.mjs",
+    "mcp-entry.mjs",
+    "scripts/",
+    "docs/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "wsl",
+    "wsl2",
+    "chrome",
+    "chrome-devtools-protocol",
+    "cdp",
+    "mcp",
+    "model-context-protocol",
+    "chrome-devtools-mcp",
+    "browser-automation",
+    "computer-use"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ZinChl/winchrome.git"
+  },
+  "scripts": {
+    "status": "node winchrome.mjs status",
+    "start": "node winchrome.mjs start"
+  }
+}

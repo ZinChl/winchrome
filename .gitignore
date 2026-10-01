@@ -1,0 +1,13 @@
+# 运行时产物
+node_modules/
+out/
+*.log
+
+# 备份与本地覆盖
+*.bak
+*.local.mjs
+
+# 编辑器 / 系统
+.DS_Store
+.vscode/
+.idea/
