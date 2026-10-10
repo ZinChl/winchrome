@@ -185,10 +185,64 @@ node winchrome.mjs seq '[{"name":"take_snapshot"},{"name":"click","args":{"uid":
   但无法消除该弹窗。
 - 不要把带敏感信息的截图提交进仓库（`.gitignore` 已排除 `out/`）。
 
+## 排错
+
+### 工具全部消失：插件版本与宿主不一致（DSH 0.2.x 起）
+
+**症状**：`mcp__winchrome__*` 工具一个都不出现；而且往往**所有 MCP 插件一起消失**
+（vscode / fpga / computer-use 全都没了）。此时 `node winchrome.mjs status` 和直接手跑
+`mcp-entry.mjs` 都是**正常**的——所以很容易误判成「winchrome 坏了」。
+
+**原因**：DSH 0.2.x 起对插件做**精确版本校验**。profile 里安装的
+`@deepseek-ai/dsh-mcp-client` 必须与 dsh 运行时版本一致，否则启动时该插件行会被直接禁用：
+
+```
+dsh: disabling profile plugin row "mcp-winchrome": Plugin @deepseek-ai/dsh-mcp-client@0.2.1-alpha.1
+is incompatible with dsh 0.2.1-alpha.2 ... Exact-version exemption: not active
+```
+
+**先复现拿到确切报错**（不要动正在跑的 GUI，另开一个端口）：
+
+```bash
+dsh --version                              # 宿主版本
+node -e "console.log(require('/home/<你>/.dsh/profiles/web/node_modules/@deepseek-ai/dsh-mcp-client/package.json').version)"
+timeout 70 dsh web --port 3099 --no-open   # 临时实例，观察启动输出里的 disabling 行
+```
+
+**修复**：把 profile 内的插件升到与宿主同版本。
+
+```bash
+dsh plugin --profile web add @deepseek-ai/dsh-mcp-client@<与 dsh 同版本>
+# 若同时用 computer-use，一并升级（它们互相有 peer 依赖）：
+dsh plugin --profile web add \
+  @deepseek-ai/dsh-computer-use@<与 dsh 同版本> \
+  @deepseek-ai/dsh-experimental-computer-use-cua-driver-mcp@<与 dsh 同版本>
+```
+
+升级后**改一下 `cordis.patch.yml`（改注释即可）触发热重载即可，通常不需要重启 GUI**。
+验证：
+
+```bash
+pgrep -af "[m]cp-entry.mjs"     # 应能看到 winchrome 的入口进程
+```
+
+> 这也解释了为什么 `dsh --dump-config` 显示配置完全正常、却依然没有工具：版本校验发生在
+> 运行时插件激活阶段，而不是配置合成阶段。排查时优先看**启动输出**，别只看配置。
+
+### 截图一直是 PNG，`WIN_MCP_EXTRA` 不生效
+
+守护进程在启动时就把参数固化进子进程了。改完环境变量要重启它：
+
+```bash
+node winchrome.mjs daemon stop     # 会按 pidfile 真正结束进程
+```
+
 ## 兼容性
 
 - 实测环境：Windows 11 + WSL2（Ubuntu）+ Chrome 154 + Node 22 +
   `chrome-devtools-mcp` **1.10.1**（30 个工具；1.9.0 为 29 个，1.10.1 新增 `get_css_styles`）。
+- 宿主（DSH）侧：0.1.6 / 0.2.1 均实测可用；注意 profile 内 `@deepseek-ai/dsh-mcp-client`
+  必须与 dsh 同版本，否则插件行会被禁用（见上方「排错」）。
 - Edge 同样可用（`chrome-devtools-mcp` 官方支持 Chromium 系浏览器）：把 `WIN_CHROME_EXE`
   指向 `msedge.exe`。注意 Edge 也继承了 Chrome 136 的默认 profile 限制。
 - 不依赖 DSH：任何能执行命令的 MCP 客户端都能用它。
